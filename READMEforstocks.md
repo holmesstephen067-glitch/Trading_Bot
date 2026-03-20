@@ -115,8 +115,8 @@ PORTFOLIO = {
     "AMD":  {"shares": 400,  "avg_cost": 129.86, "contracts": 4},
     "NVDA": {"shares": 200,  "avg_cost": 125.94, "contracts": 2},
     "SOFI": {"shares": 2000, "avg_cost": 21.09,  "contracts": 20},
-    "AMZN": {"shares": 200,  "avg_cost": 40.44,  "contracts": 2},
-    "HOOD": {"shares": 100,  "avg_cost": 45.00,  "contracts": 1},
+    "AMZU": {"shares": 200,  "avg_cost": 40.44,  "contracts": 2},
+    "ROBN": {"shares": 100,  "avg_cost": 45.00,  "contracts": 1},
 }
 
 PORTFOLIO_VALUE = 117125
