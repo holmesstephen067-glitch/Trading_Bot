@@ -1,6 +1,6 @@
 # 📈 Trading_Bot
 
-Personal AI-powered trading signal engine. XGBoost ML predictions, full 10-indicator stack, ARIMA forecasting, carry unwind detection, intermarket flow analysis (Crude → DXY → USD/JPY → Stocks), and Telegram morning briefs before market open.
+Personal AI-powered trading agent and signal engine. Claude-primary Flask backend with 15 live trading tools, XGBoost ML predictions, full 10-indicator stack, ARIMA forecasting, carry unwind detection, intermarket flow analysis (Crude → DXY → USD/JPY → Stocks), and Telegram morning briefs before market open.
 
 Part of the `my_AI_brain` system. Public brain bundles live at [holmesstephen067-glitch/my_AI_brain](https://github.com/holmesstephen067-glitch/my_AI_brain).
 
@@ -10,9 +10,11 @@ Part of the `my_AI_brain` system. Public brain bundles live at [holmesstephen067
 
 | File | Raw URL |
 |------|---------|
+| Main.py | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/Main.py` |
+| signal_engine.py | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/signal_engine.py` |
 | finance.md | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/finance.md` |
 | READMEforstocks.md | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/READMEforstocks.md` |
-| signal_engine.py | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/signal_engine.py` |
+| Claude.md-Trading_dashboard | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/Claude.md-Trading_dashboard` |
 | backtester.py | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/backtester.py` |
 | alerts.py | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/alerts.py` |
 | requirements.txt | `https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/requirements.txt` |
@@ -23,13 +25,15 @@ Part of the `my_AI_brain` system. Public brain bundles live at [holmesstephen067
 
 ```
 Trading_Bot/
-├── README.md             ← this file — overview + all raw URLs
-├── finance.md            ← full trading intelligence (keys in Claude Project only)
-├── READMEforstocks.md    ← trading bot documentation + setup
-├── signal_engine.py      ← XGBoost + 10-indicator signal engine (1,200+ lines)
-├── backtester.py         ← VectorBT RSI optimizer + covered call backtest
-├── alerts.py             ← Telegram morning brief + carry unwind monitor
-└── requirements.txt      ← all Python dependencies
+├── Main.py                      ← Flask AI agent — active backend (Claude-primary, 15 tools)
+├── signal_engine.py             ← Portfolio config + risk constants
+├── README.md                    ← This file — overview + all raw URLs
+├── Claude.md-Trading_dashboard  ← Claude Code session context
+├── finance.md                   ← Skill bundle — Alpha Vantage, FRED, EDGAR, Treasury
+├── READMEforstocks.md           ← Full trading bot docs + setup guide
+├── backtester.py                ← VectorBT RSI optimizer + covered call backtest
+├── alerts.py                    ← Telegram morning brief + carry unwind monitor
+└── requirements.txt             ← All Python dependencies
 ```
 
 ---
@@ -39,12 +43,12 @@ Trading_Bot/
 Paste these URLs at the start of any trading session:
 
 ```
-https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/finance.md
+https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/Main.py
 https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/signal_engine.py
 https://raw.githubusercontent.com/holmesstephen067-glitch/Trading_Bot/refs/heads/main/READMEforstocks.md
 ```
 
-Claude fetches all three, loads the full system, and is ready to run the session start sequence — carry unwind score, Buffett Indicator, FRED macro snapshot, intermarket flow, regime detection, earnings check, and per-ticker ML analysis.
+Claude fetches all three, loads the full system (positions, tools, risk config, session protocol), and is ready to run the session start sequence — carry unwind score, Buffett Indicator, FRED macro snapshot, intermarket flow, regime detection, earnings check, and per-ticker ML analysis.
 
 ---
 
@@ -54,13 +58,34 @@ Claude fetches all three, loads the full system, and is ready to run the session
 # Install dependencies
 pip install -r requirements.txt
 
+# Set your Anthropic key (required — OpenAI/Gemini are optional fallbacks)
+export ANTHROPIC_API_KEY=your_key
+
+# Start the Flask agent
+python Main.py
+# Runs on http://localhost:5000
+
 # Full morning scan on portfolio
-python signal_engine.py
+curl -X POST http://localhost:5000/scan
 
 # Specific tickers
-python signal_engine.py --tickers TSLA NVDA AMD
+curl -X POST http://localhost:5000/scan -H "Content-Type: application/json" -d '{"tickers": ["TSLA","NVDA","AMD"]}'
 
-# Save results to JSON
+# Live P&L on all positions
+curl http://localhost:5000/positions
+
+# Covered call scan
+curl http://localhost:5000/covered-calls
+
+# Macro snapshot + carry unwind
+curl http://localhost:5000/macro
+
+# Ask the agent anything
+curl -X POST http://localhost:5000/brain -H "Content-Type: application/json" -d '{"goal": "Should I sell a covered call on SOFI today?"}'
+
+# Run signal_engine.py standalone (no Flask)
+python signal_engine.py
+python signal_engine.py --tickers TSLA NVDA AMD
 python signal_engine.py --save
 
 # Optimize RSI thresholds for a ticker
@@ -74,6 +99,43 @@ python alerts.py test
 # Start daily 7:30 AM morning briefs
 python alerts.py
 ```
+
+---
+
+## Main.py — Flask AI Agent
+
+### LLM Chain
+Claude (primary) → OpenAI GPT-4o-mini → Gemini Pro (fallback)
+
+### Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/` | GET | Health check + status |
+| `/brain` | POST | General trading agent — `{"goal": "..."}` |
+| `/positions` | GET | Live P&L across all holdings |
+| `/covered-calls` | GET | Covered call opportunity scan |
+| `/macro` | GET | FRED macro snapshot + carry unwind score |
+| `/scan` | POST | Full 8-section weekly scan |
+| `/log-trade` | POST | Log a trade to journal |
+| `/trades` | GET | Recent trades — `?n=10` |
+| `/tool/<name>` | GET | Invoke any tool directly — `?input=TICKER` |
+| `/tools` | GET | List all registered tools |
+
+### Registered Tools (15)
+```
+polygon_snapshot    finnhub_quote       finnhub_news
+finnhub_earnings    fred_series         macro_snapshot
+crypto_fear_greed   polygon_options     portfolio_pnl
+carry_unwind_score  covered_call_scan   av_rsi
+av_macd             av_atr              calculate
+```
+
+### Trade Journal
+SQLite `trading_memory.db` with two tables:
+- `trades` — structured trade log (ticker, strategy, entry, target, stop, ATR, size, P&L)
+- `macro_snapshots` — session-level macro state (VIX, yield curve, carry score, regime)
+- `memory` — goal/response pairs for agent context
 
 ---
 
@@ -138,8 +200,6 @@ The most critical macro signal. Scored before every trade.
 
 ## USD/JPY 160 — Risk Premium Gauge
 
-The single most important macro level to watch.
-
 ```
 Stalls at 160, turns south, NO retest
 → Risk premium LEAVING the market
@@ -151,18 +211,37 @@ Breaks clean through 160 (close above + volume confirmed)
 
 ---
 
+## Current Portfolio
+
+| Ticker | Shares | Avg Cost | Contracts |
+|--------|--------|----------|-----------|
+| TSLA   | 700    | $204.68  | 7 |
+| AMD    | 400    | $129.86  | 4 |
+| NVDA   | 200    | $125.94  | 2 |
+| SOFI   | 2,000  | $21.09   | 20 |
+| AMZU   | 200    | $40.44   | 2 |
+| ROBN   | 100    | $45.00   | 1 |
+| BTC    | 0.0120392 | $92,551 | — |
+| ETH    | 0.40   | $2,829   | — |
+
+> Update positions in `Main.py` POSITIONS dict, `signal_engine.py` PORTFOLIO dict, and `Claude.md-Trading_dashboard` together.
+
+---
+
 ## API Keys
 
 Keys are **not stored in this repo**. They live in Claude Project instructions only.
+`Main.py` includes project defaults that can be overridden with environment variables.
 
-APIs used by this system:
+APIs used:
 - **Polygon.io** — OHLCV bars, options chain, VWAP
 - **Alpha Vantage** — All 10 technical indicators (25 calls/day free tier)
 - **Finnhub** — Live quotes, earnings calendar, insider sentiment, news
 - **FRED** — VIX, yield curve, CPI, oil, gold, Buffett Indicator components
+- **Anthropic** — Claude LLM (primary agent brain)
 
 Free sources (no key needed):
-- Crypto Fear & Greed, Nasdaq earnings calendar, CBOE P/C ratio, Market Chameleon, iborrowdesk, Capitol Trades, Whale Alert, CFTC COT report
+- Crypto Fear & Greed, Nasdaq earnings calendar, CBOE P/C ratio, Market Chameleon, iborrowdesk, Capitol Trades, Whale Alert
 
 ---
 
@@ -189,6 +268,8 @@ Free sources (no key needed):
 | statsmodels | ARIMA price forecasting | ✅ Core |
 | pandas-ta | All 10 technical indicators | ✅ Core |
 | vectorbt | Backtesting + optimization | ✅ Core |
+| flask | Agent backend (Main.py) | ✅ Core |
+| anthropic | Claude LLM client | ✅ Core |
 | backtrader | Live trading integration | 🔜 Phase 2 |
 | pyfolio-reloaded | Portfolio analytics | 🔜 Phase 2 |
 | tensorflow/keras | LSTM sequence models | 🔜 Phase 3 |
@@ -199,7 +280,8 @@ Free sources (no key needed):
 
 ## Roadmap
 
-**Phase 1 — Signal Engine ✅ Done**
+**Phase 1 — Signal Engine + Agent ✅ Done**
+- [x] Main.py Flask agent — Claude-primary, 15 tools, trade journal
 - [x] All 10 indicators, XGBoost ML, ARIMA forecasting
 - [x] Carry unwind 7-signal system
 - [x] Covered call income analyzer
@@ -207,7 +289,8 @@ Free sources (no key needed):
 - [x] Buffett Indicator + intermarket flow
 
 **Phase 2 — Live Execution**
-- [ ] Alpaca API (stocks + options)
+- [ ] Frontend React dashboard (connects to Main.py endpoints)
+- [ ] Alpaca API (stocks + options execution)
 - [ ] Semi-auto Telegram confirm mode
 - [ ] 30-day paper trading validation
 - [ ] Trade journal + PyFolio analytics
