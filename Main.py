@@ -9,7 +9,10 @@ import sqlite3
 import json
 import re
 from datetime import datetime, timedelta
-
+from core.decision_engine import (
+    generate_trade_signal,
+    options_strategy_selector
+)
 app = Flask(__name__)
 
 # =========================
@@ -31,13 +34,6 @@ PORTFOLIO_VALUE = 117125
 BUYING_POWER    = 24514
 
 MAX_POSITION_PCT = 0.05
-
-POSITIONS = {
-    "TSLA": {"shares": 700, "avg_cost": 204.68},
-    "AMD":  {"shares": 400, "avg_cost": 129.86},
-    "NVDA": {"shares": 200, "avg_cost": 125.94},
-    "SOFI": {"shares": 2000, "avg_cost": 21.09},
-}
 
 # =========================
 # 🗄️ DB
@@ -180,14 +176,33 @@ def explain(signal):
 @app.route("/brain", methods=["POST"])
 def brain():
     data = request.get_json()
-    ticker = data.get("ticker", "TSLA")
+    ticker = data.get("ticker")
 
-    signal = decision_engine(ticker)
-    explanation = explain(signal)
+    quote = tool_finnhub_quote(ticker)
+    price = quote.get("c")
+
+    atr_data = tool_av_indicator("ATR", ticker)
+    atr = 1  # fallback (we’ll refine this next)
+
+    rsi_data = tool_av_indicator("RSI", ticker)
+    rsi = 50  # parse properly next step
+
+    carry_data = tool_carry_unwind_score()
+    carry_score = carry_data.get("score", 0)
+
+    vix_data = tool_fred_series("VIXCLS")
+    vix = float(vix_data.get("value", 20))
+
+    signal = generate_trade_signal(
+        ticker, price, atr, rsi, carry_score, vix
+    )
+
+    options = options_strategy_selector(ticker, price, PORTFOLIO)
 
     return jsonify({
         "signal": signal,
-        "explanation": explanation
+        "options": options,
+        "carry": carry_data
     })
 
 @app.route("/positions")
