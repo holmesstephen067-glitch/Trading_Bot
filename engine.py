@@ -90,3 +90,50 @@ def run_backtest(df, ticker, initial_cash=10000):
         equity_curve.append(current_value)
 
     return analyze_results(trades, equity_curve)
+
+import numpy as np
+
+def analyze_results(trades, equity_curve):
+    if not trades:
+        return {"error": "No trades"}
+
+    pnl = [t.pnl for t in trades]
+
+    total_return = (equity_curve[-1] - equity_curve[0]) / equity_curve[0]
+
+    wins = [p for p in pnl if p > 0]
+    losses = [p for p in pnl if p <= 0]
+
+    win_rate = len(wins) / len(pnl)
+
+    avg_win = np.mean(wins) if wins else 0
+    avg_loss = np.mean(losses) if losses else 0
+
+    returns = np.diff(equity_curve) / equity_curve[:-1]
+
+    sharpe = np.mean(returns) / (np.std(returns) + 1e-9) * np.sqrt(252)
+
+    max_dd = max_drawdown(equity_curve)
+
+    return {
+        "total_return": round(total_return * 100, 2),
+        "win_rate": round(win_rate * 100, 2),
+        "avg_win": round(avg_win, 2),
+        "avg_loss": round(avg_loss, 2),
+        "sharpe": round(sharpe, 2),
+        "max_drawdown": round(max_dd * 100, 2),
+        "total_trades": len(trades)
+    }
+
+
+def max_drawdown(equity):
+    peak = equity[0]
+    max_dd = 0
+
+    for x in equity:
+        if x > peak:
+            peak = x
+        dd = (peak - x) / peak
+        max_dd = max(max_dd, dd)
+
+    return max_dd
