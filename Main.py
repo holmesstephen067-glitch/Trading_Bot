@@ -5,6 +5,22 @@ import os
 from core.decision_engine import generate_trade_signal, options_strategy_selector
 from core.feature_engine import compute_rsi, compute_atr, compute_ema, compute_macd
 from core.macro_engine import build_macro_context
+from backtesting.engine import run_backtest
+@app.route("/backtest", methods=["POST"])
+def backtest():
+
+    data = request.get_json()
+    ticker = data.get("ticker")
+
+    bars = polygon_bars(ticker)
+
+    if not bars:
+        return jsonify({"error": "No data"}), 400
+
+    results = run_backtest(ticker, bars)
+
+    return jsonify(results)
+
 from backtesting.walk_forward import walk_forward_analysis
 from signal_engine import fetch_polygon_bars, calculate_indicators
 
