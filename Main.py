@@ -5,6 +5,20 @@ import os
 from core.decision_engine import generate_trade_signal, options_strategy_selector
 from core.feature_engine import compute_rsi, compute_atr, compute_ema, compute_macd
 from core.macro_engine import build_macro_context
+from backtesting.walk_forward import walk_forward_analysis
+from signal_engine import fetch_polygon_bars, calculate_indicators
+
+@app.route("/walkforward", methods=["POST"])
+def walkforward():
+    ticker = request.json.get("ticker")
+
+    df = fetch_polygon_bars(ticker, days=800)
+    df = calculate_indicators(df)
+
+    results = walk_forward_analysis(df, ticker)
+
+    return jsonify(results)
+
 from backtesting.engine import run_backtest
 from signal_engine import fetch_polygon_bars, calculate_indicators
 
