@@ -5,6 +5,19 @@ import os
 from core.decision_engine import generate_trade_signal, options_strategy_selector
 from core.feature_engine import compute_rsi, compute_atr, compute_ema, compute_macd
 from core.macro_engine import build_macro_context
+from backtesting.engine import run_backtest
+from signal_engine import fetch_polygon_bars, calculate_indicators
+
+@app.route("/backtest", methods=["POST"])
+def backtest():
+    ticker = request.json.get("ticker")
+
+    df = fetch_polygon_bars(ticker, days=500)
+    df = calculate_indicators(df)
+
+    results = run_backtest(df, ticker)
+
+    return jsonify(results)
 
 app = Flask(__name__)
 
